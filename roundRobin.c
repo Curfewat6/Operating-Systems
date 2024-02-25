@@ -58,6 +58,7 @@ int main() {
     float average_waiting_time, average_turn_around_time, average_response_time;
     bool notBursted = true;
 
+    printf("CPU Scheduling Method: Round Robin (RR)\n");
     getInputs(&no_of_processes, &time_quantum, burst_time, timed);
 
     // Copy the burst time to remaining burst time
