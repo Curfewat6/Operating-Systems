@@ -20,7 +20,7 @@ void getInputs(int *ptr_no_of_processes, int *ptr_time_quantum, int *ptr_burst_t
 
 }
 
-void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turnaround_time, int *ptr_response_time, int *ptr_average_waiting_time, int *ptr_average_turn_around_time, int *ptr_average_response_time){
+void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turnaround_time, int *ptr_response_time, float *ptr_average_waiting_time, float *ptr_average_turn_around_time, float *ptr_average_response_time){
     int total_waiting_time = 0, total_turnaround_time = 0, total_response_time = 0;
     
     // Get the average of all the timings
@@ -42,14 +42,14 @@ void turnMeAround(int *ptr_no_of_processes, int *ptr_burst_time, int *turn_aroun
     }
 }
 
-void printVictoryBanner(int *ptr_no_of_processes, int *ptr_burst_time, int *waiting_time, int *turnaround_time, int *response_time, int *ptr_average_response_time, int *ptr_average_turn_around_time, int *ptr_average_waiting_time){
+void printVictoryBanner(int *ptr_no_of_processes, int *ptr_burst_time, int *waiting_time, int *turnaround_time, int *response_time, float *ptr_average_response_time, float *ptr_average_turn_around_time, float *ptr_average_waiting_time){
     printf("PROCESS\t\tBURST TIME\tWAITING TIME\tTURNAROUND TIME\tRESPONSE TIME\n");
     for (int process = 0; process < *ptr_no_of_processes; process++){
         printf("P%d\t\t%d\t\t%d\t\t%d\t\t%d\n", process+1, ptr_burst_time[process], waiting_time[process], turnaround_time[process], response_time[process]);
     }
     printf("The Average Waiting time: %.2f\n", *ptr_average_waiting_time);
-    printf("The Average Turnaround time: %.2f", *ptr_average_turn_around_time);
-    printf("The Average Response time: %.2f", *ptr_average_response_time);
+    printf("The Average Turnaround time: %.2f\n", *ptr_average_turn_around_time);
+    printf("The Average Response time: %.2f\n", *ptr_average_response_time);
 }
 
 int main() {
@@ -111,6 +111,9 @@ int main() {
 
     // Calculate TurnAround time (waiting time + burst time)
     turnMeAround(&no_of_processes, burst_time, turnaround_time, waiting_time);
+    
+    // Calculate the all the averages
+    calcAverages(&no_of_processes, waiting_time, turnaround_time, response_time, &average_waiting_time, &average_turn_around_time, &average_response_time);
 
     // Print the results
     printVictoryBanner(&no_of_processes, burst_time, waiting_time, turnaround_time, response_time, &average_response_time, &average_turn_around_time, &average_waiting_time);
