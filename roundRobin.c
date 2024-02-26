@@ -31,9 +31,9 @@ void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turn
     }
 
     //Calculation of the averages are here
-    *ptr_average_waiting_time = total_waiting_time / *ptr_no_of_processes;
-    *ptr_average_turn_around_time = total_turnaround_time / *ptr_no_of_processes;
-    *ptr_average_response_time = total_response_time / *ptr_no_of_processes;
+    *ptr_average_waiting_time = (float) total_waiting_time / *ptr_no_of_processes;
+    *ptr_average_turn_around_time = (float) total_turnaround_time / *ptr_no_of_processes;
+    *ptr_average_response_time = (float) total_response_time / *ptr_no_of_processes;
 }
 
 void turnMeAround(int *ptr_no_of_processes, int *ptr_burst_time, int *turn_around_time, int *waiting_time){
