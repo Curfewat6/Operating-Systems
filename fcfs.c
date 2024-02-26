@@ -1,4 +1,4 @@
-//Totally natty
+//Totally natty (Non Pre-emptive)
 #include <stdio.h>
 
 
