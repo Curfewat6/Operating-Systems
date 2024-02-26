@@ -21,7 +21,7 @@ void getInputs(int *ptr_no_of_processes, int *ptr_time_quantum, int *ptr_burst_t
 }
 
 void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turnaround_time, int *ptr_response_time, float *ptr_average_waiting_time, float *ptr_average_turn_around_time, float *ptr_average_response_time){
-    int total_waiting_time = 0, total_turnaround_time = 0, total_response_time = 0;
+    float total_waiting_time = 0, total_turnaround_time = 0, total_response_time = 0;
     
     // Get the average of all the timings
     for(int process = 0; process < *ptr_no_of_processes; process++){
@@ -31,9 +31,9 @@ void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turn
     }
 
     //Calculation of the averages are here
-    *ptr_average_waiting_time = (float) total_waiting_time / *ptr_no_of_processes;
-    *ptr_average_turn_around_time = (float) total_turnaround_time / *ptr_no_of_processes;
-    *ptr_average_response_time = (float) total_response_time / *ptr_no_of_processes;
+    *ptr_average_waiting_time = total_waiting_time / *ptr_no_of_processes;
+    *ptr_average_turn_around_time = total_turnaround_time / *ptr_no_of_processes;
+    *ptr_average_response_time = total_response_time / *ptr_no_of_processes;
 }
 
 void turnMeAround(int *ptr_no_of_processes, int *ptr_burst_time, int *turn_around_time, int *waiting_time){
