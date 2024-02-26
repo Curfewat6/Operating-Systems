@@ -1,4 +1,4 @@
-//100% natty code
+//100% natty code (Pre-emptive)
 #include <stdio.h>
 #include <stdbool.h>
 
