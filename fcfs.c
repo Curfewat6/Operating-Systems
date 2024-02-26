@@ -16,6 +16,8 @@ void getInputs(int *ptr_no_of_processes, int *ptr_burst_time, int *ptr_timed) {
     }
 
 }
+
+//This function prints out the results
 void cameAndserved(int *ptr_no_of_processes, int *ptr_burst_time, int *waiting_time, int *turnaround_time, int *response_time, float *ptr_average_response_time, float *ptr_average_turn_around_time, float *ptr_average_waiting_time){
     printf("PROCESS\t\tBURST TIME\tWAITING TIME\tTURNAROUND TIME\tRESPONSE TIME\n");
 
@@ -26,6 +28,7 @@ void cameAndserved(int *ptr_no_of_processes, int *ptr_burst_time, int *waiting_t
     printf("The Average Turnaround time: %.2f\n", *ptr_average_turn_around_time);
     printf("The Average Response time: %.2f\n", *ptr_average_response_time);
 }
+
 void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turnaround_time, int *ptr_response_time, float *ptr_average_waiting_time, float *ptr_average_turn_around_time, float *ptr_average_response_time){
     float total_waiting_time = 0, total_turnaround_time = 0, total_response_time = 0;
     
@@ -42,7 +45,6 @@ void calcAverages(int *ptr_no_of_processes, int *ptr_waiting_time, int *ptr_turn
     *ptr_average_response_time =  total_response_time / *ptr_no_of_processes;
 
 }
-
 
 int main(){
     int no_of_processes, burst_time[10], remaining_burst[10], waiting_time[10], turnaround_time[10], response_time[10], timed[10];
@@ -61,9 +63,11 @@ int main(){
         turnaround_time[process] = waiting_time[process] + burst_time[process];
         time += burst_time[process];
     }
-    
+
+    //Calculate average
     calcAverages(&no_of_processes, waiting_time, turnaround_time, response_time, &average_waiting_time, &average_turn_around_time, &average_response_time);
 
+    //Print Results
     cameAndserved(&no_of_processes, burst_time, waiting_time, turnaround_time, response_time, &average_response_time, &average_turn_around_time, &average_waiting_time);
 
     return 0;
