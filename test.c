@@ -97,10 +97,10 @@ void calcAverages(ListNodePtr *sPtr, int *no_of_processes, float *average_waitin
 
 //This function prints the final table results
 void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average_turn_around_time){
-    printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY\tWAITING TIME\tTURNAROUND TIME\n");
+    printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY|\tWAITING TIME\tTURNAROUND TIME\n");
     ListNodePtr current = *sPtr;
     while(current != NULL){
-        printf("P%d\t\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n", current->processID, current->burstTime, current->arrivalTime, current->priority, current->waitingTime, current->turnaroundTime);
+        printf("P%d\t\t%d\t\t%d\t\t%d\t|\t%d\t\t%d\n", current->processID, current->burstTime, current->arrivalTime, current->priority, current->waitingTime, current->turnaroundTime);
         current = current->next;
     }
 
