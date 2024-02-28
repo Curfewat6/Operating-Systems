@@ -3,13 +3,15 @@
 #include <stdbool.h>
 
 void getInputs(int *ptr_no_of_processes, int *ptr_time_quantum, int *ptr_burst_time, int *ptr_timed) {
-    for (int i = 0; i < *ptr_no_of_processes; i++) {
-        ptr_timed[i] = 0;
-    }
+
 
     printf("Enter the number of processes: ");
     scanf("%d", ptr_no_of_processes);
-
+    
+    for (int i = 0; i < *ptr_no_of_processes; i++) {
+        ptr_timed[i] = 0;
+    }
+    
     for(int i = 0; i < *ptr_no_of_processes; i++) {
         printf("Enter the Burst Time for process %d: ", i+1);
         scanf("%d", &ptr_burst_time[i]);
