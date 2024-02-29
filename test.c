@@ -9,6 +9,7 @@
 #define highPriority 0.3
 #define lowPriority 0.2
 #define priorityOffset 0.2
+#define shortBurst 0.2
 
 // This is the structure of the linkedlist
 typedef struct LinkedList{
@@ -56,6 +57,7 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
         ListNodePtr prevPtr = NULL;
         ListNodePtr currentPtr = *sPtr;
 
+        // Use insertion sort algorithm to sort the linked list by arrival time
         while(currentPtr!=NULL && arrivalTime > currentPtr->arrivalTime){
             prevPtr = currentPtr;
             currentPtr = currentPtr->next;
@@ -74,11 +76,11 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
 }
 
 //This function checks if the input is correct
-int inputIsInvalid(int *ptr_of_priority){
-    if(*ptr_of_priority < minimumPriorityScore || *ptr_of_priority > maximumPriorityScore){
+int inputIsInvalid(int *userInput){
+    if(*userInput < minimumPriorityScore || *userInput > maximumPriorityScore){
         return 1;   // Invalid input
     }
-    return 0;
+    return 0;       // Valid input
 }
 
 //This function calculates the average waiting time and average turn around time
@@ -92,7 +94,6 @@ void calcAverages(ListNodePtr *sPtr, int *no_of_processes, float *average_waitin
     }
     *average_waiting_time = total_waiting_time / *no_of_processes;
     *average_turn_around_time = total_turnaround_time / *no_of_processes;
-
 }
 
 //This function prints the final table results
@@ -172,7 +173,6 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 current->completionTime = *time;
                 current->turnaroundTime = TAT(&current->completionTime, &current->arrivalTime);
                 complete++;
-            } else {
             }
         }
 
