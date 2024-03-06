@@ -4,12 +4,14 @@
 #include <stdbool.h>
 
 // Declare constants
-#define minimumPriorityScore 1
-#define maximumPriorityScore 3
-#define highPriority 0.3
-#define lowPriority 0.2
-#define priorityOffset 0.2
-#define shortBurst 0.2
+#define COMPLETED 1
+#define MINIMUM_PRIORITY_SCORE 1
+#define MAXIMUM_PRIORITY_SCORE 3
+#define SHORT_BURST 0.2
+#define HIGH_PRIORITY 0.3
+#define LOW_PRIORITY 0.2
+#define PRIORITY_OFFSET 0.2
+#define EMPTY 0
 
 // This is the structure of the linkedlist
 typedef struct LinkedList{
@@ -22,6 +24,7 @@ typedef struct LinkedList{
     int turnaroundTime;
     int completionTime;
     bool cooked;
+    bool arrived;
     int timed;
     struct LinkedList *next;
 } Node;
@@ -50,6 +53,7 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
         freshNode-> burstTime = burstTime;
         freshNode-> remainingBurst = burstTime;
         freshNode-> cooked = false;
+        freshNode-> arrived = false;
         freshNode-> timed = 0;
         freshNode-> next = NULL;
 
@@ -58,9 +62,15 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
         ListNodePtr currentPtr = *sPtr;
 
         // Use insertion sort algorithm to sort the linked list by arrival time
-        while(currentPtr!=NULL && arrivalTime > currentPtr->arrivalTime){
-            prevPtr = currentPtr;
-            currentPtr = currentPtr->next;
+        while(currentPtr!=NULL && arrivalTime >= currentPtr->arrivalTime){
+            //In the case where the arrival time is the same, sort by process ID. Lower process ID gets priority
+            if(arrivalTime == currentPtr->arrivalTime && processid < currentPtr->processID){
+                prevPtr = currentPtr;
+                currentPtr = currentPtr->next;
+            } else {
+                prevPtr = currentPtr;
+                currentPtr = currentPtr->next;
+            }
         }
 
         if (prevPtr == NULL){
@@ -77,10 +87,28 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
 
 //This function checks if the input is correct
 int inputIsInvalid(int *userInput){
-    if(*userInput < minimumPriorityScore || *userInput > maximumPriorityScore){
+    if(*userInput < MINIMUM_PRIORITY_SCORE || *userInput > MAXIMUM_PRIORITY_SCORE){
+        printf("Invalid input. Priority must be between %d and %d\n", MINIMUM_PRIORITY_SCORE, MAXIMUM_PRIORITY_SCORE);
         return 1;   // Invalid input
     }
     return 0;       // Valid input
+}
+
+//This function checks if the input is correct
+bool isValidInput(int input) {
+    if (input < EMPTY) {
+        printf("Invalid input. Please enter a positive integer.\n");
+        return false;
+    }
+    return true;
+}
+
+int sumOfGantt(int *ganttTime, int *contextSwitch){
+    int sum = 0;
+    for(int i = 0; i < *contextSwitch; i++){
+        sum += ganttTime[i];
+    }
+    return sum;
 }
 
 //This function calculates the average waiting time and average turn around time
@@ -92,12 +120,14 @@ void calcAverages(ListNodePtr *sPtr, int *no_of_processes, float *average_waitin
         total_turnaround_time += current->turnaroundTime;
         current = current->next;
     }
+    
     *average_waiting_time = total_waiting_time / *no_of_processes;
     *average_turn_around_time = total_turnaround_time / *no_of_processes;
 }
 
+
 //This function prints the final table results
-void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average_turn_around_time){
+void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average_turn_around_time, int *contextSwitch){
     printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY|\tWAITING TIME\tTURNAROUND TIME\n");
     ListNodePtr current = *sPtr;
     while(current != NULL){
@@ -105,8 +135,10 @@ void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average
         current = current->next;
     }
 
+    //Simply print the averages. That's about it...
     printf("Average Waiting Time: %.2f\n", *average_waiting_time);
     printf("Average Turnaround Time: %.2f\n", *average_turn_around_time);
+    printf("Context Switches: %d\n", *contextSwitch);
 }
 
 //This function calculates the turn around time
@@ -134,19 +166,44 @@ void waitUp(ListNodePtr *sPtr, int *time, int *pid, bool *completed){
     }
 }
 
-// This function simulates the 'Improved RR CPU Scheduling Algorithm'. Each process has its share of CPU time according to it's priority
-//TODO: implement the pre-emption for the priority [Not done]
-//TODO: Calculate turn around time during execution [NOT DONE]
-void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice, int *time, int no_of_processes){
+//This function simulates the improved RR function by finishing off processes with low burst times
+void miniBurst(ListNodePtr *sPtr, int *time, int *completedProcesses, int shortBurst, int *contextSwitch, int ganttPid[], int ganttTime[]){
+    ListNodePtr current = *sPtr;
+    while(current != NULL){
+        if (current->remainingBurst <= shortBurst && !(current->cooked) && (current->arrivalTime <= *time)){
+            printf("[Mini burst] Process %d has arrived at %d\n", current->processID, *time);
+            printf("Process %d is mini bursting with %d remaining\n", current->processID, current->remainingBurst);
+            *time += current->remainingBurst;
+            printf("[Mini burst] time is now %d\n", *time);
+            ganttPid[(*contextSwitch) + 1] = current->processID;
+            ganttTime[(*contextSwitch) + 1] = current->remainingBurst;
+            current->remainingBurst = COMPLETED;
+            current->cooked = true;
+            current->completionTime = *time;
+            current->turnaroundTime = TAT(&current->completionTime, &current->arrivalTime);
+            current->waitingTime = current->turnaroundTime - current->burstTime;
+            (*completedProcesses)++;
+            (*contextSwitch)++;
+            
+        }
+        current = current->next;
+    }
 
+}
+
+// This function simulates the 'Improved RR CPU Scheduling Algorithm'. Each process has its share of CPU time according to it's priority
+void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice, int *time, int *contextSwitch, int no_of_processes){
     //Declare variables
+    int ganttPid[100];
+    int ganttTime[100];
     ListNodePtr current = *sPtr;
     ListNodePtr start = *sPtr;
     int timeQuantum, cpuClock = 0, complete = 0;
+    int shortBurst = *medium_slice * SHORT_BURST;
 
     // Iterate through the linked list and burst the processes
     while(current != NULL){
-        ListNodePtr temp = current;
+        ListNodePtr temp = start;
         
         // Assign time quantums based on the priority
         switch(current->priority){
@@ -161,25 +218,43 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 break;
         }
         
-        // Check if the process has finished its execution. If it has, then move to the next process
-        if(!(current->cooked)){
-            // Dispatch the process from ready queue to CPU for time quantum. Other process wait.
+        // finish off processes with low burst times
+        miniBurst(&temp, time, &complete, shortBurst, contextSwitch, ganttPid, ganttTime);
+
+        // Check if the process has finished its execution and arrived. If it finished or hasn't arrived, then move to the next process
+        if((!(current->cooked)) && (current->arrivalTime <= *time)){
+            // printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
+            // printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
             current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->timed, &current->priority);
-            waitUp(&temp, &cpuClock, &current->processID, &current->cooked);
+            // printf("After normal burst time %d\n", *time);
+            (*contextSwitch)++;
+            // printf("Context switch %d\n", *contextSwitch);
+            ganttPid[*contextSwitch] = current->processID;
+            ganttTime[*contextSwitch] = *time - sumOfGantt(ganttTime, contextSwitch);
 
             // If this process is completed, mark its completion time and calculate turn around time
-            if ((current->remainingBurst) == 1){
+            if ((current->remainingBurst) == COMPLETED){
                 current->cooked = true;
                 current->completionTime = *time;
                 current->turnaroundTime = TAT(&current->completionTime, &current->arrivalTime);
+                current->waitingTime = current->turnaroundTime - current->burstTime;
                 complete++;
             }
         }
-
+        
         // Algorithm will enter here when all processes have executed to completion
         if(complete == no_of_processes){
-            printf("All processes are done\n");
-            finaliseWait(&start);
+            printf("All processes are done\n");                
+            
+            //Print gantt chart
+            for(int i = 0; i < *contextSwitch+ 1; i++){
+                printf("%d (%d)", ganttPid[i], ganttTime[i]);
+                if(i != *contextSwitch){
+                    printf("|   ");
+                }
+            }
+
+            printf("\n\n");
             break;
         }
 
@@ -199,25 +274,28 @@ int cpuTime(int *burstTime, int *time_quantum, int *time, int *clock, int *timed
     if(*burstTime < *time_quantum){
         *time += *burstTime;
         *burstTime = 0;
-    } 
+    }
+
     // If not, then proceed normally
     else {
-        *burstTime -= *time_quantum;
-        *time += *time_quantum;
-
         // Implement improved Round Robin here.
         // If process is approaching completion, give it more time
         switch (*priority){
-            case 1:
-                if((*burstTime > *time_quantum) && (*burstTime <= (*time_quantum + (*time_quantum * highPriority)))){
+            case 3:
+                if((*burstTime > *time_quantum) && (*burstTime <= (*time_quantum + (*time_quantum * HIGH_PRIORITY)))){
                     *time += *burstTime;
-                    *burstTime -= *time_quantum;
+                    *burstTime = 0;
                 }
             default:
-                if((*burstTime > *time_quantum) && (*burstTime <= (*time_quantum + (*time_quantum * lowPriority)))){
-                    *time += *burstTime;
-                    *burstTime -= *time_quantum;
+                if((*burstTime > *time_quantum) && (*burstTime <= (*time_quantum + (*time_quantum * LOW_PRIORITY)))){
+                     *time += *burstTime;
+                    *burstTime = 0;
                 }
+        }
+
+        if (*burstTime != EMPTY){
+            *burstTime -= *time_quantum;
+            *time += *time_quantum;
         }
     }
 
@@ -234,6 +312,7 @@ int main(){
     int pid, no_of_processes, burstTime, arrivalTime, priority, low_time_slice, medium_time_slice, high_time_slice;
     int time = 0;
     int valid = 1;
+    int contextSwitch = -1;
     float average_waiting_time, average_turn_around_time;
     Node* tempPtr = NULL;
     Node* current = NULL;
@@ -243,8 +322,8 @@ int main(){
 
         //Get the number of processes and time slice. Print out the necessary time quantum information
         getInputs(&no_of_processes, &medium_time_slice);
-        low_time_slice = medium_time_slice - (medium_time_slice * priorityOffset);
-        high_time_slice = medium_time_slice + (medium_time_slice * priorityOffset);
+        low_time_slice = medium_time_slice - (medium_time_slice * PRIORITY_OFFSET);
+        high_time_slice = medium_time_slice + (medium_time_slice * PRIORITY_OFFSET);
         printf("\nTime Quantum for High Priority Processes: %d\n", high_time_slice);
         printf("Time Quantum for Medium Priority Processes: %d\n", medium_time_slice);
         printf("Time Quantum for Low Priority Processes: %d\n", low_time_slice);
@@ -253,23 +332,30 @@ int main(){
         //Get the arrival time burst time and priority for each process and assign it to the linked list
         for(int process = 0; process < no_of_processes; process++){
             pid = process + 1;
-            printf("Enter the Burst Time for process %d: ", pid);
-            scanf("%d", &burstTime);
-            printf("Enter the Arrival Time for process %d: ", pid);
-            scanf("%d", &arrivalTime);
-            printf("Enter the priority for process %d [high to low, 3 to 1]: ", pid);
-            scanf("%d", &priority);
-            if(inputIsInvalid(&priority)){
-                printf("Priority needs to be from 1-3. Please try again.\n");
-                return 0;
-            }
+
+            do {
+                printf("Enter the Burst Time for process %d: ", pid);
+                scanf("%d", &burstTime);
+            } while(!isValidInput(burstTime));
+
+            do {
+                printf("Enter the Arrival Time for process %d: ", pid);
+                scanf("%d", &arrivalTime);
+            } while(!isValidInput(arrivalTime));
+            
+            do {
+                printf("Enter the priority for process %d [high to low, 3 to 1]: ", pid);
+                scanf("%d", &priority);
+            } while(inputIsInvalid(&priority));
+           
             // Assign to node and link it up with existing nodes
             linkNodes(&current, pid, burstTime, arrivalTime, priority);
-        }
 
+        }
+        printf("\n");
         // Initialise temporary pointer and start bursting
         tempPtr = current;
-        burst(&tempPtr, &low_time_slice, &medium_time_slice, &high_time_slice, &time, no_of_processes);
+        burst(&tempPtr, &low_time_slice, &medium_time_slice, &high_time_slice, &time, &contextSwitch, no_of_processes);
 
 
         // Calculate the averages
@@ -277,7 +363,7 @@ int main(){
         calcAverages(&tempPtr, &no_of_processes, &average_waiting_time, &average_turn_around_time);
 
         //Print the results
-        printResults(&current, &average_waiting_time, &average_turn_around_time);
+        printResults(&current, &average_waiting_time, &average_turn_around_time, &contextSwitch);
         
         //FREE THEM SLAVES (memory)
         ListNodePtr temp;
