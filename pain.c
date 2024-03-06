@@ -13,6 +13,15 @@
 #define PRIORITY_OFFSET 0.2
 #define EMPTY 0
 
+// This is the structure for the gantt chart
+typedef struct ganttChart{
+    int pid;
+    int time;
+    struct ganttChart *next;
+} GanttChartEntry;
+
+typedef GanttChartEntry *GanttChartPtr;
+
 // This is the structure of the linkedlist
 typedef struct LinkedList{
     int processID;
@@ -88,9 +97,19 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
 //This function checks if the input is correct
 int inputIsInvalid(int *userInput){
     if(*userInput < MINIMUM_PRIORITY_SCORE || *userInput > MAXIMUM_PRIORITY_SCORE){
+        printf("Invalid input. Priority must be between %d and %d\n", MINIMUM_PRIORITY_SCORE, MAXIMUM_PRIORITY_SCORE);
         return 1;   // Invalid input
     }
     return 0;       // Valid input
+}
+
+//This function checks if the input is correct
+bool isValidInput(int input) {
+    if (input < EMPTY) {
+        printf("Invalid input. Please enter a positive integer.\n");
+        return false;
+    }
+    return true;
 }
 
 //This function calculates the average waiting time and average turn around time
@@ -107,7 +126,23 @@ void calcAverages(ListNodePtr *sPtr, int *no_of_processes, float *average_waitin
     *average_turn_around_time = total_turnaround_time / *no_of_processes;
 }
 
+// void printGantt(GanttChartPtr *sPtr){
+//     GanttChartPtr current = *sPtr;
+//     while(current != NULL){
+//         printf("P%d\t", current->pid);
+//         current = current->next;
+//     }
+//     printf("\n");
 
+// }
+
+void printGantt(GanttChartEntry** gcHead) {
+    GanttChartEntry* current = *gcHead;
+    while (current != NULL) {
+        printf("PID: %d, Time: %d\n", current->pid, current->time);
+        current = current->next;
+    }
+}
 //This function prints the final table results
 void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average_turn_around_time, int *contextSwitch){
     printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY|\tWAITING TIME\tTURNAROUND TIME\n");
@@ -121,6 +156,41 @@ void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average
     printf("Average Waiting Time: %.2f\n", *average_waiting_time);
     printf("Average Turnaround Time: %.2f\n", *average_turn_around_time);
     printf("Context Switches: %d\n", *contextSwitch);
+}
+
+// void addRecord(GanttChartPtr **head, int pid, int time){
+//     GanttChartPtr freshEntry = malloc(sizeof(GanttChartEntry));
+//     if (freshEntry != NULL){
+//         freshEntry->pid = pid;
+//         freshEntry->time = time;
+//         freshEntry->next = *head;
+//         *head = freshEntry;
+//     } else{
+//         printf("Failed to add record. No memory available for the moment.\n");
+//     }
+// }
+
+
+void addRecord(GanttChartEntry** gcCurrent, GanttChartEntry** gcHead, int pid, int time) {
+    printf("THE AVATAR NODE %d\n",(*gcHead)->pid);
+    GanttChartEntry* newNode = malloc(sizeof(GanttChartEntry));
+    
+    if (newNode != NULL) {
+        newNode->pid = pid;
+        newNode->time = time;
+        newNode->next = NULL;
+        if ((*gcHead) == NULL) {
+            *gcHead = newNode;
+            printf("First node added %d\n", newNode->pid);
+        } else {
+            printf("Adding node %d\t%d\n", newNode->pid, newNode->time);
+            (*gcCurrent)->next = newNode;
+            printf("Node added. %d-> %d -> %d\n",(*gcHead)->pid, newNode->pid, (*gcCurrent)->pid);
+        }
+        *gcCurrent = newNode;
+    } else {
+        printf("Failed to insert node. No memory available.\n");
+    }
 }
 
 //This function calculates the turn around time
@@ -167,11 +237,10 @@ void miniBurst(ListNodePtr *sPtr, int *time, int *completedProcesses, int shortB
         }
         current = current->next;
     }
-
 }
 
 // This function simulates the 'Improved RR CPU Scheduling Algorithm'. Each process has its share of CPU time according to it's priority
-void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice, int *time, int *contextSwitch, int no_of_processes){
+void burst(GanttChartEntry** gcCurrent, GanttChartEntry** gcHead, ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice, int *time, int *contextSwitch, int no_of_processes){
     //Declare variables
     ListNodePtr current = *sPtr;
     ListNodePtr start = *sPtr;
@@ -197,14 +266,18 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
         
         // finish off processes with low burst times
         miniBurst(&temp, time, &complete, shortBurst, contextSwitch);
-
+        addRecord(&gcCurrent, &gcHead, current->processID, *time);
         // Check if the process has finished its execution and arrived. If it finished or hasn't arrived, then move to the next process
         if((!(current->cooked)) && (current->arrivalTime <= *time)){
-            printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
-            printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
+          //  printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
+          //  printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
             current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->timed, &current->priority);
-            printf("After normal burst time %d\n", *time);
+           // printf("After normal burst time %d\n", *time);
+            // addRecord(&gcPtr, current->processID, *time);
+            
+            addRecord(&gcCurrent, &gcHead, current->processID, *time);
             (*contextSwitch)++;
+
 
             // If this process is completed, mark its completion time and calculate turn around time
             if ((current->remainingBurst) == COMPLETED){
@@ -273,11 +346,15 @@ int cpuTime(int *burstTime, int *time_quantum, int *time, int *clock, int *timed
 
 int main(){
     //Declare variables and pointers
+    printf(NULL);
     int pid, no_of_processes, burstTime, arrivalTime, priority, low_time_slice, medium_time_slice, high_time_slice;
     int time = 0;
     int valid = 1;
     int contextSwitch = -1;
     float average_waiting_time, average_turn_around_time;
+    GanttChartEntry* gcHead = NULL;
+    
+    GanttChartEntry* gcCurrent = NULL;
     Node* tempPtr = NULL;
     Node* current = NULL;
 
@@ -296,16 +373,22 @@ int main(){
         //Get the arrival time burst time and priority for each process and assign it to the linked list
         for(int process = 0; process < no_of_processes; process++){
             pid = process + 1;
-            printf("Enter the Burst Time for process %d: ", pid);
-            scanf("%d", &burstTime);
-            printf("Enter the Arrival Time for process %d: ", pid);
-            scanf("%d", &arrivalTime);
-            printf("Enter the priority for process %d [high to low, 3 to 1]: ", pid);
-            scanf("%d", &priority);
-            if(inputIsInvalid(&priority)){
-                printf("Priority needs to be from 1-3. Please try again.\n");
-                return 0;
-            }
+
+            do {
+                printf("Enter the Burst Time for process %d: ", pid);
+                scanf("%d", &burstTime);
+            } while(!isValidInput(burstTime));
+
+            do {
+                printf("Enter the Arrival Time for process %d: ", pid);
+                scanf("%d", &arrivalTime);
+            } while(!isValidInput(arrivalTime));
+            
+            do {
+                printf("Enter the priority for process %d [high to low, 3 to 1]: ", pid);
+                scanf("%d", &priority);
+            } while(inputIsInvalid(&priority));
+           
             // Assign to node and link it up with existing nodes
             linkNodes(&current, pid, burstTime, arrivalTime, priority);
 
@@ -313,15 +396,17 @@ int main(){
         printf("\n");
         // Initialise temporary pointer and start bursting
         tempPtr = current;
-        burst(&tempPtr, &low_time_slice, &medium_time_slice, &high_time_slice, &time, &contextSwitch, no_of_processes);
-
+        burst(&gcCurrent, &gcHead, &tempPtr, &low_time_slice, &medium_time_slice, &high_time_slice, &time, &contextSwitch, no_of_processes);
+        
 
         // Calculate the averages
         tempPtr = current;
-        calcAverages(&tempPtr, &no_of_processes, &average_waiting_time, &average_turn_around_time);
+        
+        printGantt(&gcHead);
+        //calcAverages(&tempPtr, &no_of_processes, &average_waiting_time, &average_turn_around_time);
 
         //Print the results
-        printResults(&current, &average_waiting_time, &average_turn_around_time, &contextSwitch);
+        //printResults(&current, &average_waiting_time, &average_turn_around_time, &contextSwitch);
         
         //FREE THEM SLAVES (memory)
         ListNodePtr temp;
