@@ -217,7 +217,7 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 timeQuantum = *high_slice;
                 break;
         }
-        
+        //printf("Process %d has remaining burst time of: %d\n", current->processID, current->remainingBurst);
         // finish off processes with low burst times
         miniBurst(&temp, time, &complete, shortBurst, contextSwitch, ganttPid, ganttTime);
 
@@ -239,7 +239,11 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 current->turnaroundTime = TAT(&current->completionTime, &current->arrivalTime);
                 current->waitingTime = current->turnaroundTime - current->burstTime;
                 complete++;
-            }
+                
+                if(current->next != NULL && *time < current->next->arrivalTime){
+                    *time = current->next->arrivalTime;
+                }
+            }   
         }
         
         // Algorithm will enter here when all processes have executed to completion
