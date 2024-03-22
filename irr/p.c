@@ -23,9 +23,10 @@ typedef struct LinkedList{
     int waitingTime;
     int turnaroundTime;
     int completionTime;
+    int responseTime;
     bool cooked;
     bool arrived;
-    int timed;
+    bool timed;
     struct LinkedList *next;
 } Node;
 
@@ -54,7 +55,7 @@ void linkNodes(ListNodePtr *sPtr, int processid, int burstTime, int arrivalTime,
         freshNode-> remainingBurst = burstTime;
         freshNode-> cooked = false;
         freshNode-> arrived = false;
-        freshNode-> timed = 0;
+        freshNode-> timed = false;
         freshNode-> next = NULL;
 
         // Initialise two pointers to traverse and sort linked list
@@ -128,10 +129,10 @@ void calcAverages(ListNodePtr *sPtr, int *no_of_processes, float *average_waitin
 
 //This function prints the final table results
 void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average_turn_around_time, int *contextSwitch){
-    printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY|\tWAITING TIME\tTURNAROUND TIME\n");
+    printf("PROCESS\t\tBURST TIME\tARRIVAL TIME\tPRIORITY|\tWAITING TIME\tTURNAROUND TIME\tRESPONSE TIME\n");
     ListNodePtr current = *sPtr;
     while(current != NULL){
-        printf("P%d\t\t%d\t\t%d\t\t%d\t|\t%d\t\t%d\n", current->processID, current->burstTime, current->arrivalTime, current->priority, current->waitingTime, current->turnaroundTime);
+        printf("P%d\t\t%d\t\t%d\t\t%d\t|\t%d\t\t%d\t\t\t\t%d\n", current->processID, current->burstTime, current->arrivalTime, current->priority, current->waitingTime, current->turnaroundTime, current->responseTime);
         current = current->next;
     }
 
@@ -217,15 +218,19 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 timeQuantum = *high_slice;
                 break;
         }
-        //printf("Process %d has remaining burst time of: %d\n", current->processID, current->remainingBurst);
+        printf("Process %d has remaining burst time of: %d\n", current->processID, current->remainingBurst);
         // finish off processes with low burst times
         miniBurst(&temp, time, &complete, shortBurst, contextSwitch, ganttPid, ganttTime);
 
         // Check if the process has finished its execution and arrived. If it finished or hasn't arrived, then move to the next process
         if((!(current->cooked)) && (current->arrivalTime <= *time)){
+            if(!(current->timed)){
+                current->responseTime = *time - current->arrivalTime;
+                current->timed = true;
+            }
             // printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
             // printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
-            current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->timed, &current->priority);
+            current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->priority);
             // printf("After normal burst time %d\n", *time);
             (*contextSwitch)++;
             // printf("Context switch %d\n", *contextSwitch);
@@ -272,8 +277,8 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
 }
 
 // This function simulates the CPU time for each process during the relative time quantum
-int cpuTime(int *burstTime, int *time_quantum, int *time, int *clock, int *timed, int *priority){
-
+int cpuTime(int *burstTime, int *time_quantum, int *time, int *clock, int *priority){
+    
     // Checks if the burst time is less.
     if(*burstTime < *time_quantum){
         *time += *burstTime;
