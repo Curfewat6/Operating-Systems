@@ -104,6 +104,7 @@ bool isValidInput(int input) {
     return true;
 }
 
+// This function calculates the sum of gantt values
 int sumOfGantt(int *ganttTime, int *contextSwitch){
     int sum = 0;
     for(int i = 0; i < *contextSwitch; i++){
@@ -219,7 +220,7 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 break;
         }
         printf("Process %d has remaining burst time of: %d\n", current->processID, current->remainingBurst);
-        // finish off processes with low burst times
+        // Finish off processes with low burst times
         miniBurst(&temp, time, &complete, shortBurst, contextSwitch, ganttPid, ganttTime);
 
         // Check if the process has finished its execution and arrived. If it finished or hasn't arrived, then move to the next process
@@ -228,12 +229,8 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 current->responseTime = *time - current->arrivalTime;
                 current->timed = true;
             }
-            // printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
-            // printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
             current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->priority);
-            // printf("After normal burst time %d\n", *time);
             (*contextSwitch)++;
-            // printf("Context switch %d\n", *contextSwitch);
             ganttPid[*contextSwitch] = current->processID;
             ganttTime[*contextSwitch] = *time - sumOfGantt(ganttTime, contextSwitch);
 
@@ -255,14 +252,14 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
         if(complete == no_of_processes){
             printf("All processes are done\n");                
             
-            //Print gantt chart
+            
             for(int i = 0; i < *contextSwitch+ 1; i++){
+                // Print gantt chart
                 printf("%d (%d)", ganttPid[i], ganttTime[i]);
                 if(i != *contextSwitch){
                     printf("|   ");
                 }
             }
-
             printf("\n\n");
             break;
         }
