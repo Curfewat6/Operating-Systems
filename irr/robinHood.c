@@ -142,7 +142,7 @@ void printResults(ListNodePtr *sPtr, float *average_waiting_time, float *average
     printf("Average Turnaround Time: %.2f\n", *average_turn_around_time);
     printf("Average Waiting Time: %.2f\n", *average_waiting_time);
     printf("Average Response Time: %.2f\n", *average_response_time);
-    printf("Context Switches: %d\n", *contextSwitch);
+    printf("Context Switches: %d\n", *contextSwitch + 1);
 }
 
 //This function calculates the turn around time
@@ -177,6 +177,7 @@ void miniBurst(ListNodePtr *sPtr, int *time, int *completedProcesses, int shortB
         if (current->remainingBurst <= shortBurst && !(current->cooked) && (current->arrivalTime <= *time)){
             printf("[Mini burst] Process %d has arrived at %d\n", current->processID, *time);
             printf("Process %d is mini bursting with %d remaining\n", current->processID, current->remainingBurst);
+            current->responseTime = *time - current->arrivalTime;
             *time += current->remainingBurst;
             printf("[Mini burst] time is now %d\n", *time);
             ganttPid[(*contextSwitch) + 1] = current->processID;
@@ -221,7 +222,6 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 timeQuantum = *high_slice;
                 break;
         }
-        printf("Process %d has remaining burst time of: %d\n", current->processID, current->remainingBurst);
         // finish off processes with low burst times
         miniBurst(&temp, time, &complete, shortBurst, contextSwitch, ganttPid, ganttTime);
 
@@ -231,12 +231,8 @@ void burst(ListNodePtr *sPtr, int *low_slice, int* medium_slice, int *high_slice
                 current->responseTime = *time - current->arrivalTime;
                 current->timed = true;
             }
-            // printf("[*]Process %d has arrived at %d\n", current->processID ,*time);
-            // printf("\t-->Process %d is bursting with %d remaining\n", current->processID, current->remainingBurst);
             current->remainingBurst = cpuTime(&current->remainingBurst, &timeQuantum, time, &cpuClock, &current->priority);
-            // printf("After normal burst time %d\n", *time);
             (*contextSwitch)++;
-            // printf("Context switch %d\n", *contextSwitch);
             ganttPid[*contextSwitch] = current->processID;
             ganttTime[*contextSwitch] = *time - sumOfGantt(ganttTime, contextSwitch);
 
@@ -377,7 +373,7 @@ int main(){
         tempPtr = current;
         calcAverages(&tempPtr, &no_of_processes, &average_waiting_time, &average_turn_around_time, &average_response_time);
 
-        printf("\n[+]Total taken: %d\n",time);
+        printf("\n[+] Total time taken: %d\n",time);
         //Print the results
         printResults(&current, &average_waiting_time, &average_turn_around_time, &average_response_time, &contextSwitch);
         
